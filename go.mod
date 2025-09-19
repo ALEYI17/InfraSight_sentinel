@@ -8,4 +8,5 @@ require (
 	github.com/segmentio/kafka-go v0.4.49 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
+	google.golang.org/protobuf v1.36.9 // indirect
 )

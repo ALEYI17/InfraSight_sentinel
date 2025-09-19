@@ -1,8 +1,14 @@
 package consumer
 
 import (
+	"context"
+
 	"github.com/ALEYI17/InfraSight_sentinel/internal/config"
+	"github.com/ALEYI17/InfraSight_sentinel/internal/grpc/pb"
+	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 type KafkaConsumer struct{
@@ -26,5 +32,24 @@ func NewKafkaConsumer(cfg config.ProgramsConfig) *KafkaConsumer{
     topic: cfg.Kafka_topic,
     groupid: cfg.Kafka_groupid,
 
+  }
+}
+
+func(c *KafkaConsumer) Consume(ctx context.Context) error{
+  defer c.kafkaReader.Close()
+  logger := logutil.GetLogger()
+  for{
+    m,err := c.kafkaReader.ReadMessage(ctx)
+    if err != nil {
+      return err
+    }
+
+    var e pb.EbpfEvent
+
+    err = proto.Unmarshal(m.Value,&e)
+    if err != nil {
+      logger.Error("failed to unmarshal event", zap.Error(err))
+      continue
+    }
   }
 }
