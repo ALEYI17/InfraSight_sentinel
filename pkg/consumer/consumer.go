@@ -5,6 +5,7 @@ import (
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/config"
 	"github.com/ALEYI17/InfraSight_sentinel/internal/grpc/pb"
+	"github.com/ALEYI17/InfraSight_sentinel/pkg/engine"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
@@ -51,5 +52,7 @@ func(c *KafkaConsumer) Consume(ctx context.Context) error{
       logger.Error("failed to unmarshal event", zap.Error(err))
       continue
     }
+
+    engine.HandleEvent(&e)
   }
 }
