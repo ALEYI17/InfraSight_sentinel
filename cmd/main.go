@@ -14,6 +14,7 @@ import (
 
 func main(){
 
+  logutil.InitLogger()
   logger := logutil.GetLogger()
 
   ctx, cancel := context.WithCancel(context.Background())

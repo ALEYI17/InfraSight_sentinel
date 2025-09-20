@@ -9,6 +9,7 @@ import (
 
 
 func HandleEvent(ev *pb.EbpfEvent) {
+  logger := logutil.GetLogger()
   applicablerules,ok := rules.Registry[ev.EventType]
 
   if len(applicablerules) == 0 || !ok{
@@ -17,7 +18,7 @@ func HandleEvent(ev *pb.EbpfEvent) {
 
   for _,rule := range applicablerules{
     if ok,msg := rule.Evaluate(ev);ok{
-      logutil.GetLogger().Info("alert", zap.String("alert from", rule.Name()),zap.String("msg", msg), zap.String("syscall_type", ev.EventType))
+      logger.Info("alert", zap.String("alert from", rule.Name()),zap.String("msg", msg), zap.String("syscall_type", ev.EventType))
     }
   }
 }
