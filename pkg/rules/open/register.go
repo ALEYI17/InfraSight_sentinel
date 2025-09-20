@@ -7,6 +7,6 @@ func Register() []programs.Rule{
     &SensitiveFileRead{},
     &DockerSockAccess{},
     &ProcKcoreAccess{},
-    &SudoersModification{},
+    &SudoersOpen{},
   }
 }

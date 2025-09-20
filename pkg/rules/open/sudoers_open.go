@@ -7,9 +7,9 @@ import (
 	"github.com/ALEYI17/InfraSight_sentinel/internal/grpc/pb"
 )
 
-type SudoersModification struct{}
+type SudoersOpen struct{}
 
-func (r *SudoersModification) Name() string { return "SudoersOpen" }
+func (r *SudoersOpen) Name() string { return "SudoersOpen" }
 
 func isSudoersFile(pth string) bool {
 	if pth == "" {
@@ -31,7 +31,7 @@ func isSudoersFile(pth string) bool {
 	return false
 }
 
-func (r *SudoersModification) Evaluate(ev *pb.EbpfEvent) (bool, string){
+func (r *SudoersOpen) Evaluate(ev *pb.EbpfEvent) (bool, string){
 
   if snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop); ok && snoop.Snoop != nil {
 		filename := strings.TrimSpace(snoop.Snoop.Filename)
