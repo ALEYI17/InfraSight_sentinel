@@ -12,15 +12,21 @@ type UnexpectedMount struct{}
 
 func (r *UnexpectedMount) Name() string { return "UnexpectedMount" }
 
-func (r *UnexpectedMount) Evaluate(ev *pb.EbpfEvent) (bool, string) {
+func (r *UnexpectedMount) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider mounts originating from containers
 	if !programs.IsContainerEvent(ev) {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	mnt, ok := ev.Payload.(*pb.EbpfEvent_Mount)
 	if !ok || mnt.Mount == nil {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	dir := strings.TrimSpace(mnt.Mount.DirName)
@@ -36,7 +42,23 @@ func (r *UnexpectedMount) Evaluate(ev *pb.EbpfEvent) (bool, string) {
 				"Container process %s (pid=%d, image=%s) mounted %s -> %s (type=%s)",
 				ev.Comm, ev.Pid, ev.ContainerImage, src, dir, typ,
 			)
-			return true, msg
+			return &programs.RuleResult{
+        Matched: true,
+        RuleName:     r.Name(),
+        Message:      msg,
+        SyscallType:  ev.EventType,
+        ProcessName:  ev.Comm,
+        PID:          int64(ev.Pid),
+        User:         ev.User,
+        ContainerID:  ev.ContainerId,
+        ContainerImg: ev.ContainerImage,
+        Extra: map[string]string{
+          "src": src,
+          "dir": dir,
+          "typ": typ,
+        },
+
+      }
 		}
 	}
 
@@ -46,8 +68,27 @@ func (r *UnexpectedMount) Evaluate(ev *pb.EbpfEvent) (bool, string) {
 			"Container process %s (pid=%d, image=%s) may be bind-mounting host: %s -> %s",
 			ev.Comm, ev.Pid, ev.ContainerImage, src, dir,
 		)
-		return true, msg
+		return &programs.RuleResult{
+        Matched: true,
+        RuleName:     r.Name(),
+        Message:      msg,
+        SyscallType:  ev.EventType,
+        ProcessName:  ev.Comm,
+        PID:          int64(ev.Pid),
+        User:         ev.User,
+        ContainerID:  ev.ContainerId,
+        ContainerImg: ev.ContainerImage,
+        Extra: map[string]string{
+          "src": src,
+          "dir": dir,
+          "typ": typ,
+        },
+
+      }
 	}
 
-	return false, ""
+	return &programs.RuleResult{
+    Matched: false,
+    RuleName: r.Name(),
+  }
 }

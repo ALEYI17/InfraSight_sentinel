@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/grpc/pb"
+	"github.com/ALEYI17/InfraSight_sentinel/internal/programs"
 )
 
 type SensitiveFileRead struct{}
@@ -17,11 +18,14 @@ var sensitiveFiles = []string{
 
 func (r *SensitiveFileRead) Name() string { return "SensitiveFileRead" }
 
-func (r *SensitiveFileRead) Evaluate(ev *pb.EbpfEvent) (bool, string){
+func (r *SensitiveFileRead) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
   
   snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop)
 	if !ok {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: true,
+      RuleName: r.Name(),
+    }
 	}
 
   for _, f := range sensitiveFiles{
@@ -29,10 +33,26 @@ func (r *SensitiveFileRead) Evaluate(ev *pb.EbpfEvent) (bool, string){
 		  msg := fmt.Sprintf("Process %s (pid=%d, user=%s) opened sensitive file %s",
 				ev.Comm, ev.Pid, ev.User, f)		
 
-      return true, msg
+      return &programs.RuleResult{
+        Matched: true,
+        RuleName:     r.Name(),
+        Message:      msg,
+        SyscallType:  ev.EventType,
+        ProcessName:  ev.Comm,
+        PID:          int64(ev.Pid),
+        User:         ev.User,
+        ContainerID:  ev.ContainerId,
+        ContainerImg: ev.ContainerImage,
+        Extra: map[string]string{
+          "filename": snoop.Snoop.Filename,
+        },
+      }
 	  }
   }
 
   
-	return false, ""
+	return &programs.RuleResult{
+    Matched: false,
+    RuleName: r.Name(),
+  }
 }

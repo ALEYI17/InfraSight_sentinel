@@ -68,9 +68,9 @@ func TestKubernetesAPIConnection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ok, _ := rule.Evaluate(tt.event)
-			if ok != tt.expected {
-				t.Errorf("expected %v, got %v", tt.expected, ok)
+			res := rule.Evaluate(tt.event)
+			if res.Matched != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, res.Matched)
 			}
 		})
 	}

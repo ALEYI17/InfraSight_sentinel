@@ -12,15 +12,21 @@ type DockerSockAccess struct{}
 
 func (r *DockerSockAccess) Name() string { return "DockerSockAccess" }
 
-func (r *DockerSockAccess) Evaluate(ev *pb.EbpfEvent) (bool, string) {
+func (r *DockerSockAccess) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider events coming from containers
 	if !programs.IsContainerEvent(ev) {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop)
 	if !ok || snoop.Snoop == nil {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	path := strings.TrimSpace(strings.ToLower(snoop.Snoop.Filename))
@@ -30,7 +36,23 @@ func (r *DockerSockAccess) Evaluate(ev *pb.EbpfEvent) (bool, string) {
 			"Container process %s (pid=%d, image=%s) attempted to open docker socket: %s",
 			ev.Comm, ev.Pid, ev.ContainerImage, snoop.Snoop.Filename,
 		)
-		return true, msg
+		return &programs.RuleResult{
+      Matched: true,
+      RuleName:     r.Name(),
+      Message:      msg,
+      SyscallType:  ev.EventType,
+      ProcessName:  ev.Comm,
+      PID:          int64(ev.Pid),
+      User:         ev.User,
+      ContainerID:  ev.ContainerId,
+      ContainerImg: ev.ContainerImage,
+      Extra: map[string]string{
+        "filename": snoop.Snoop.Filename,
+      },
+    }
 	}
-	return false, ""
+	return &programs.RuleResult{
+    Matched: false,
+    RuleName: r.Name(),
+  }
 }

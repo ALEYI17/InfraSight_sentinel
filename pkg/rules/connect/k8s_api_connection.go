@@ -36,41 +36,70 @@ func isPrivateIPv4(addr string) bool {
 	return false
 }
 
-func (r *KubernetesAPIConnection) Evaluate(ev *pb.EbpfEvent) (bool, string) {
-	// Only consider container-originated events
-	if !programs.IsContainerEvent(ev) {
-		return false, ""
-	}
+func (r *KubernetesAPIConnection) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
+    // Only consider container-originated events
+    if !programs.IsContainerEvent(ev) {
+        return &programs.RuleResult{Matched: false, RuleName: r.Name()}
+    }
 
-	netEv, ok := ev.Payload.(*pb.EbpfEvent_Network)
-	if !ok || netEv.Network == nil {
-		return false, ""
-	}
+    netEv, ok := ev.Payload.(*pb.EbpfEvent_Network)
+    if !ok || netEv.Network == nil {
+        return &programs.RuleResult{Matched: false, RuleName: r.Name()}
+    }
 
-	daddr := strings.TrimSpace(netEv.Network.Daddrv4)
-	dport := strings.TrimSpace(netEv.Network.Dport)
+    daddr := strings.TrimSpace(netEv.Network.Daddrv4)
+    dport := strings.TrimSpace(netEv.Network.Dport)
 
-	// K8s API is commonly on 443 or 6443. If the destination is a private IP
-	// (cluster-internal) and the port matches, flag it.
-	if (dport == "443" || dport == "6443") && isPrivateIPv4(daddr) {
-		msg := fmt.Sprintf(
-			"Container process %s (pid=%d, image=%s) connected to K8s API %s:%s",
-			ev.Comm, ev.Pid, ev.ContainerImage, daddr, dport,
-		)
-		return true, msg
-	}
+    // --- Case 1: API connection via private IP ---
+    if (dport == "443" || dport == "6443") && isPrivateIPv4(daddr) {
+        msg := fmt.Sprintf(
+            "Container process %s (pid=%d, image=%s) connected to K8s API %s:%s",
+            ev.Comm, ev.Pid, ev.ContainerImage, daddr, dport,
+        )
 
-	// Optionally: flag connections to cluster API domain names if resolved_domain is present
-	if netEv.Network.ResolvedDomain != "" {
-		domain := strings.ToLower(netEv.Network.ResolvedDomain)
-		if strings.Contains(domain, "kubernetes") || strings.Contains(domain, "k8s") {
-			msg := fmt.Sprintf(
-				"Container process %s (pid=%d, image=%s) connected to domain %s",
-				ev.Comm, ev.Pid, ev.ContainerImage, netEv.Network.ResolvedDomain,
-			)
-			return true, msg
-		}
-	}
+        return &programs.RuleResult{
+            Matched:      true,
+            RuleName:     r.Name(),
+            Message:      msg,
+            SyscallType:  ev.EventType,
+            ProcessName:  ev.Comm,
+            PID:          int64(ev.Pid),
+            User:         ev.User,
+            ContainerID:  ev.ContainerId,
+            ContainerImg: ev.ContainerImage,
+            Extra: map[string]string{
+                "daddr": daddr,
+                "dport": dport,
+            },
+        }
+    }
 
-	return false, ""
+    // --- Case 2: API connection via domain ---
+    if netEv.Network.ResolvedDomain != "" {
+        domain := strings.ToLower(netEv.Network.ResolvedDomain)
+        if strings.Contains(domain, "kubernetes") || strings.Contains(domain, "k8s") {
+            msg := fmt.Sprintf(
+                "Container process %s (pid=%d, image=%s) connected to domain %s",
+                ev.Comm, ev.Pid, ev.ContainerImage, netEv.Network.ResolvedDomain,
+            )
+
+            return &programs.RuleResult{
+                Matched:      true,
+                RuleName:     r.Name(),
+                Message:      msg,
+                SyscallType:  ev.EventType,
+                ProcessName:  ev.Comm,
+                PID:          int64(ev.Pid),
+                User:         ev.User,
+                ContainerID:  ev.ContainerId,
+                ContainerImg: ev.ContainerImage,
+                Extra: map[string]string{
+                    "domain": netEv.Network.ResolvedDomain,
+                },
+            }
+        }
+    }
+
+    return &programs.RuleResult{Matched: false, RuleName: r.Name()}
 }
+

@@ -17,8 +17,25 @@ func HandleEvent(ev *pb.EbpfEvent) {
   }
 
   for _,rule := range applicablerules{
-    if ok,msg := rule.Evaluate(ev);ok{
-      logger.Info("alert", zap.String("alert from", rule.Name()),zap.String("msg", msg), zap.String("syscall_type", ev.EventType))
-    }
+    if res := rule.Evaluate(ev); res.Matched {
+			// Build zap fields for structured logging
+			fields := []zap.Field{
+				zap.String("rule", res.RuleName),
+				zap.String("message", res.Message),
+				zap.String("syscall_type", res.SyscallType),
+				zap.String("process", res.ProcessName),
+				zap.Int64("pid", res.PID),
+				zap.String("user", res.User),
+				zap.String("container_id", res.ContainerID),
+				zap.String("container_image", res.ContainerImg),
+			}
+
+			// Add any extra metadata dynamically
+			for k, v := range res.Extra {
+				fields = append(fields, zap.String("extra."+k, v))
+			}
+
+			logger.Info("alert", fields...)
+		}
   }
 }

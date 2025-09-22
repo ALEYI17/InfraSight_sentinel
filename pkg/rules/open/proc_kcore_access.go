@@ -12,15 +12,21 @@ type ProcKcoreAccess struct{}
 
 func (r *ProcKcoreAccess) Name() string { return "ProcKcoreAccess" }
 
-func (r *ProcKcoreAccess) Evaluate(ev *pb.EbpfEvent) (bool, string) {
+func (r *ProcKcoreAccess) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider events coming from containers
 	if !programs.IsContainerEvent(ev) {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop)
 	if !ok || snoop.Snoop == nil {
-		return false, ""
+		return &programs.RuleResult{
+      Matched: false,
+      RuleName: r.Name(),
+    }
 	}
 
 	path := strings.TrimSpace(strings.ToLower(snoop.Snoop.Filename))
@@ -29,8 +35,24 @@ func (r *ProcKcoreAccess) Evaluate(ev *pb.EbpfEvent) (bool, string) {
 			"Container process %s (pid=%d, image=%s) attempted to open /proc/kcore (possible host memory access)",
 			ev.Comm, ev.Pid, ev.ContainerImage,
 		)
-		return true, msg
+		return &programs.RuleResult{
+      Matched: true,
+      RuleName:     r.Name(),
+      Message:      msg,
+      SyscallType:  ev.EventType,
+      ProcessName:  ev.Comm,
+      PID:          int64(ev.Pid),
+      User:         ev.User,
+      ContainerID:  ev.ContainerId,
+      ContainerImg: ev.ContainerImage,
+      Extra: map[string]string{
+        "Filename": snoop.Snoop.Filename,
+      },
+    }
 	}
 
-	return false, ""
+	return &programs.RuleResult{
+    Matched: false,
+    RuleName: r.Name(),
+  }
 }

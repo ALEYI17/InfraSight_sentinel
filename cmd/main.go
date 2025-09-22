@@ -17,6 +17,8 @@ func main(){
   logutil.InitLogger()
   logger := logutil.GetLogger()
 
+  logger.Info("InfraSight Sentinel starting up...")
+
   ctx, cancel := context.WithCancel(context.Background())
   defer cancel()
 
@@ -30,9 +32,20 @@ func main(){
 
   cfg := config.LoadConfig()
 
+  logger.Info("Configuration loaded", 
+        zap.Strings("kafka_brokers", cfg.Kafka_broker),
+        zap.String("kafka_topic", cfg.Kafka_topic),
+  )
+
   kc :=consumer.NewKafkaConsumer(*cfg)
 
+  logger.Info("Kafka consumer initialized", 
+        zap.String("group_id", cfg.Kafka_groupid))
+
+
   if err := kc.Consume(ctx); err !=nil{
-    logger.Warn("ERROR WHILE CONSUMING KAFKA EVENTS", zap.Error(err))
+    logger.Warn("Error while consuming Kafka events", zap.Error(err))
   }
+
+  logger.Info("InfraSight Sentinel has shut down")
 }

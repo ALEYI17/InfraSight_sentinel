@@ -33,9 +33,9 @@ func TestCodeInjection(t *testing.T) {
 				},
 			}
 
-			got, _ := rule.Evaluate(ev)
-			if got != tt.expected {
-				t.Errorf("expected %v, got %v (req=%s)", tt.expected, got, tt.request)
+			res := rule.Evaluate(ev)
+			if res.Matched != tt.expected {
+				t.Errorf("expected %v, got %v (req=%s)", tt.expected, res.Matched, tt.request)
 			}
 		})
 	}

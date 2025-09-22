@@ -32,9 +32,9 @@ func TestSudoersOpen(t *testing.T) {
 				},
 			}
 
-			got, _ := rule.Evaluate(ev)
-			if got != tt.expected {
-				t.Errorf("expected %v, got %v", tt.expected, got)
+			res := rule.Evaluate(ev)
+			if res.Matched != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, res.Matched)
 			}
 		})
 	}

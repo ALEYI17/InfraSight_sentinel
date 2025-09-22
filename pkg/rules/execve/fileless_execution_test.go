@@ -48,9 +48,9 @@ func TestFilelessExecution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ok, msg := rule.Evaluate(tt.event)
-			if ok != tt.expected {
-				t.Errorf("expected %v, got %v (msg=%s)", tt.expected, ok, msg)
+			res := rule.Evaluate(tt.event)
+			if res.Matched != tt.expected {
+				t.Errorf("expected %v, got %v (msg=%s)", tt.expected, res.Matched, res.Message)
 			}
 		})
 	}
