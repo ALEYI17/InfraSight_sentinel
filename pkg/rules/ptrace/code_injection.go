@@ -11,6 +11,8 @@ type CodeInjection struct{}
 
 func (r *CodeInjection) Name() string { return "PtraceCodeInjection" }
 
+func (r *CodeInjection) Type() string { return programs.LoaderPtrace }
+
 func (r *CodeInjection) Evaluate(ev *pb.EbpfEvent)  *programs.RuleResult{
 	pt, ok := ev.Payload.(*pb.EbpfEvent_Ptrace)
 	if !ok {

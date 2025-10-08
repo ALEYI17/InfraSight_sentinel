@@ -13,6 +13,8 @@ type KubernetesAPIConnection struct{}
 
 func (r *KubernetesAPIConnection) Name() string { return "KubernetesAPIConnection" }
 
+func (r *KubernetesAPIConnection) Type() string {return programs.LoaderConnect}
+
 func isPrivateIPv4(addr string) bool {
 	ip := net.ParseIP(addr)
 	if ip == nil {

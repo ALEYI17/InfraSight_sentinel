@@ -12,6 +12,8 @@ type ProcKcoreAccess struct{}
 
 func (r *ProcKcoreAccess) Name() string { return "ProcKcoreAccess" }
 
+func (r *ProcKcoreAccess) Type() string { return programs.LoaderOpen }
+
 func (r *ProcKcoreAccess) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider events coming from containers
 	if !programs.IsContainerEvent(ev) {

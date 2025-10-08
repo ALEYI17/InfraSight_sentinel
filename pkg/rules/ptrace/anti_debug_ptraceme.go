@@ -12,6 +12,8 @@ type AntiDebugPtrace struct{}
 
 func (r *AntiDebugPtrace) Name() string { return "AntiDebugPtrace" }
 
+func (r *AntiDebugPtrace) Type() string { return programs.LoaderPtrace }
+
 func (r *AntiDebugPtrace) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
   pt, ok := ev.Payload.(*pb.EbpfEvent_Ptrace)
 	if !ok || pt.Ptrace == nil {

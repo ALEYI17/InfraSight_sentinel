@@ -17,7 +17,7 @@ type Condition struct {
 }
 
 type YAMLRule struct {
-	RuleName        string            `yaml:"rule_name"`
+	RuleName    string        `yaml:"rule_name"`
 	EventType   string            `yaml:"event_type"`
 	Description string            `yaml:"description"`
 	Match       map[string]string `yaml:"match"`
@@ -77,6 +77,10 @@ func eventToMap(ev *pb.EbpfEvent) map[string]string{
 
 func (r *YAMLRule) Name() string { return r.RuleName }
 
+func (r *YAMLRule) Type() string {
+	return r.EventType
+}
+
 func (r *YAMLRule) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
 
   if strings.ToLower(ev.EventType) != strings.ToLower(r.EventType){
@@ -93,7 +97,7 @@ func (r *YAMLRule) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
 
   msg := r.Message
 	if msg == "" {
-		msg = fmt.Sprintf("Rule %s triggered on %s", r.Name, ev.EventType)
+		msg = fmt.Sprintf("Rule %s triggered on %s", r.RuleName, ev.EventType)
 	}
 
   return &programs.RuleResult{

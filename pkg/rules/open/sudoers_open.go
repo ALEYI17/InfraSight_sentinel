@@ -12,6 +12,8 @@ type SudoersOpen struct{}
 
 func (r *SudoersOpen) Name() string { return "SudoersOpen" }
 
+func (r *SudoersOpen) Type() string { return programs.LoaderOpen }
+
 func isSudoersFile(pth string) bool {
 	if pth == "" {
 		return false

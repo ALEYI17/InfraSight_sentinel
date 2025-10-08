@@ -9,6 +9,7 @@ import (
 	"github.com/ALEYI17/InfraSight_sentinel/internal/config"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/consumer"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
+	"github.com/ALEYI17/InfraSight_sentinel/pkg/rules"
 	"go.uber.org/zap"
 )
 
@@ -36,6 +37,8 @@ func main(){
         zap.Strings("kafka_brokers", cfg.Kafka_broker),
         zap.String("kafka_topic", cfg.Kafka_topic),
   )
+
+  rules.InitRules()
 
   kc :=consumer.NewKafkaConsumer(*cfg)
 
