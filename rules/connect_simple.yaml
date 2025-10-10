@@ -1,0 +1,16 @@
+rules:
+  - rule_name: "Root SSH Connection (Simple OR)"
+    event_type: "connect"
+    description: "Triggers when the user is root OR the destination port is 22"
+    logic: "or"
+    conditions:
+      - field: "user"
+        operator: "equals"
+        value: "root"
+
+      - field: "network.Dport"
+        operator: "equals"
+        value: "22"
+
+    message: "Possible SSH connection or root activity detected"
+

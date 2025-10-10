@@ -1,0 +1,32 @@
+rules:
+  - rule_name: "Complex Network Behavior"
+    event_type: "connect"
+    description: "((Dport=22 OR Dport=23) AND (user=root OR comm contains ssh)) OR Daddrv4 contains 10.0.0."
+    logic: "or"
+    conditions:
+      - logic: "and"
+        subconditions:
+          - logic: "or"
+            subconditions:
+              - field: "network.Dport"
+                operator: "equals"
+                value: "22"
+              - field: "network.Dport"
+                operator: "equals"
+                value: "23"
+
+          - logic: "or"
+            subconditions:
+              - field: "user"
+                operator: "equals"
+                value: "root"
+              - field: "comm"
+                operator: "contains"
+                value: "ssh"
+
+      - field: "network.Daddrv4"
+        operator: "contains"
+        value: "10.0.0."
+
+    message: "Possible SSH/Telnet or internal network connection detected"
+
