@@ -17,14 +17,16 @@ import (
 var Registry = map[string][]programs.Rule{}
 
 
-func InitRules() {
+func InitRules(path string) {
   logger := logutil.GetLogger()
   Registry[programs.LoaderOpen] = open.Register()
 	Registry[programs.LoaderMount] = mount.Register()
 	Registry[programs.LoaderConnect] = connect.Register()
 	Registry[programs.LoaderPtrace] = ptrace.Register()
 
-  yamlDir := filepath.Join("rules")
+  yamlDir := filepath.Join(path)
+
+  logger.Info("Loading YAML rules from", zap.String("path", yamlDir))
 
   yamlRules, err := dynamic.LoadYAMLRules(yamlDir)
 

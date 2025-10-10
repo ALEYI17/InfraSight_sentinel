@@ -38,7 +38,7 @@ func main(){
         zap.String("kafka_topic", cfg.Kafka_topic),
   )
 
-  rules.InitRules()
+  rules.InitRules("rules")
 
   kc :=consumer.NewKafkaConsumer(*cfg)
 

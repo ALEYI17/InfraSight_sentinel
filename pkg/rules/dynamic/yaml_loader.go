@@ -37,6 +37,7 @@ func LoadYAMLRules(dir string) ([]programs.Rule, error){
 			return fmt.Errorf("failed to parse YAML %s: %w", path, err)
 		}
 
+
     for _, r := range rf.Rules{
       all = append(all, &r)
     }

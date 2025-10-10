@@ -3,6 +3,7 @@ package dynamic
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/grpc/pb"
@@ -14,13 +15,15 @@ type Condition struct {
 	Field    string `yaml:"field"`
 	Operator string `yaml:"operator"`
 	Value    string `yaml:"value"`
+  Logic    string `yaml:"logic,omitempty"`
+  Subconditions []Condition  `yaml:"subconditions,omitempty"`
 }
 
 type YAMLRule struct {
-	RuleName    string        `yaml:"rule_name"`
+	RuleName    string            `yaml:"rule_name"`
 	EventType   string            `yaml:"event_type"`
 	Description string            `yaml:"description"`
-	Match       map[string]string `yaml:"match"`
+  Logic       string            `yaml:"logic,omitempty"`
   Conditions  []Condition       `yaml:"conditions"`
 	Message     string            `yaml:"message"`
 }
@@ -88,11 +91,8 @@ func (r *YAMLRule) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
   }
 
   Values := eventToMap(ev)
-  for _,cond := range r.Conditions{
-    fieldVal := Values[cond.Field]
-    if !compare(fieldVal, cond.Operator, cond.Value){
-      return &programs.RuleResult{Matched: false, RuleName: r.RuleName}
-    }
+  if !evaluateConditionsWithLogic(r.Conditions, Values,r.Logic){
+    return &programs.RuleResult{Matched: false, RuleName: r.RuleName}
   }
 
   msg := r.Message
@@ -114,15 +114,78 @@ func (r *YAMLRule) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
 
 }
 
+func evaluateConditionsWithLogic(conds []Condition, values map[string]string, logic string) bool{
+  if len(conds) == 0 {
+		return true
+	}
+
+  results := make([]bool, 0, len(conds))
+  for _, cond := range conds {
+		results = append(results, evaluateCondition(cond, values))
+	}
+
+  logic = strings.ToLower(strings.TrimSpace(logic))
+	if logic == "" {
+		logic = "and"
+	}
+
+	if logic == "or" {
+		for _, r := range results {
+			if r {
+				return true
+			}
+		}
+		return false
+	}
+
+  for _, r := range results {
+		if !r {
+			return false
+		}
+	}
+	return true
+}
+
+func evaluateCondition(c Condition, values map[string]string) bool {
+	if len(c.Subconditions) > 0 {
+		return evaluateConditionsWithLogic(c.Subconditions, values, c.Logic)
+	}
+
+	actual := values[c.Field]
+	return compare(actual, c.Operator, c.Value)
+}
 
 func compare(actual, op, expected string) bool {
-	actual = strings.ToLower(strings.TrimSpace(actual))
-	expected = strings.ToLower(strings.TrimSpace(expected))
+	actual = strings.TrimSpace(actual)
+	expected = strings.TrimSpace(expected)
+  op = strings.ToLower(strings.TrimSpace(op))
+
+  aNum, aErr := strconv.ParseFloat(actual, 64)
+	eNum, eErr := strconv.ParseFloat(expected, 64)
+	isNumeric := aErr == nil && eErr == nil
 	switch op {
-	case "equals":
-		return actual == expected
+	case "equals", "==":
+    if isNumeric{
+      return aNum == eNum
+    }
+		return strings.EqualFold(actual, expected)
+  case "not_equals", "!=":
+    if isNumeric {
+			return aNum != eNum
+		}
+    return !strings.EqualFold(actual, expected)
+  case "greater_than",">":
+    return isNumeric && aNum > eNum
+  case "greater_or_equal" , ">=":
+    return isNumeric && aNum >= eNum
+  case "less_than", "<":
+    return isNumeric && aNum < eNum
+  case "less_or_equal", "<=":
+    return isNumeric && aNum <= eNum
 	case "contains":
 		return strings.Contains(actual, expected)
+  case "not_contains":
+    return !strings.Contains(strings.ToLower(actual), strings.ToLower(expected))
 	case "starts_with":
 		return strings.HasPrefix(actual, expected)
 	case "ends_with":
@@ -133,7 +196,26 @@ func compare(actual, op, expected string) bool {
 			return false
 		}
 		return re.MatchString(actual)
+  case "in":
+    values := strings.Split(expected, ",")
+    for _,v := range values{
+      if strings.EqualFold(strings.TrimSpace(v), actual){
+        return true
+      }
+    }
+    return false
+  case "not_in":
+    values := strings.Split(expected, ",")
+    for _,v := range values{
+      if strings.EqualFold(strings.TrimSpace(v), actual){
+        return false
+      }
+    }
+    return true
 	default:
 		return false
 	}
 }
+
+
+
