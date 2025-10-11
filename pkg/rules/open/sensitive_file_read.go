@@ -20,6 +20,8 @@ func (r *SensitiveFileRead) Name() string { return "SensitiveFileRead" }
 
 func (r *SensitiveFileRead) Type() string { return programs.LoaderOpen }
 
+func (r *SensitiveFileRead) Source() string {return programs.BuiltinSource}
+
 func (r *SensitiveFileRead) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
   
   snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop)

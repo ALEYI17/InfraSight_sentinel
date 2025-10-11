@@ -14,6 +14,8 @@ func (r *DockerSockAccess) Name() string { return "DockerSockAccess" }
 
 func (r *DockerSockAccess) Type() string { return programs.LoaderOpen }
 
+func (r *DockerSockAccess) Source() string {return programs.BuiltinSource}
+
 func (r *DockerSockAccess) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider events coming from containers
 	if !programs.IsContainerEvent(ev) {

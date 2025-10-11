@@ -14,6 +14,8 @@ func (r *SudoersOpen) Name() string { return "SudoersOpen" }
 
 func (r *SudoersOpen) Type() string { return programs.LoaderOpen }
 
+func (r *SudoersOpen) Source() string {return programs.BuiltinSource}
+
 func isSudoersFile(pth string) bool {
 	if pth == "" {
 		return false

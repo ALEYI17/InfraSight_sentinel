@@ -106,6 +106,25 @@ func (r *RuleRegister) Add(eventType string, rule programs.Rule) {
 	r.Registry[eventType] = append(r.Registry[eventType], rule)
 }
 
+func (r *RuleRegister) removeRulesByFile(path string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+  if path == programs.BuiltinSource {
+		return
+	}
+
+	for et, rules := range r.Registry {
+		filtered := rules[:0]
+		for _, rule := range rules {
+			if rule.Source() != path {
+				filtered = append(filtered, rule)
+			}
+		}
+		r.Registry[et] = filtered
+	}
+}
+
 func (r *RuleRegister) Delete(eventType, ruleName string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -130,6 +149,29 @@ func (r *RuleRegister) Reload() {
 	r.InitRules()
 }
 
+func (r *RuleRegister) reloadFile(path string, op fsnotify.Op) {
+	logger := logutil.GetLogger()
+
+	switch {
+	case op&fsnotify.Remove != 0:
+		r.removeRulesByFile(path)
+		logger.Info("Removed rules from deleted file", zap.String("file", path))
+
+	case op&(fsnotify.Create|fsnotify.Write) != 0:
+		newRules, err := dynamic.LoadYAMLRulesFromFile(path)
+		if err != nil {
+			logger.Warn("Failed to load YAML file", zap.String("file", path), zap.Error(err))
+			return
+		}
+
+		r.removeRulesByFile(path)
+		for _, rule := range newRules {
+			r.Add(rule.Type(), rule)
+			logger.Info("Reloaded rule", zap.String("name", rule.Name()), zap.String("file", path))
+		}
+	}
+}
+
 func (r *RuleRegister) addWatch() error {
   logger := logutil.GetLogger()
 
@@ -148,10 +190,29 @@ func (r *RuleRegister) addWatch() error {
 func (r *RuleRegister) watch(){
 
   logger := logutil.GetLogger()
-  debounce := time.NewTimer(0)
-	if !debounce.Stop() {
-		<-debounce.C
+
+  var(
+    mu sync.Mutex
+    lastPath string
+    debounce *time.Timer
+  )
+  
+  resetDebounce := func(path string, op fsnotify.Op) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		lastPath = path
+		if debounce != nil {
+			debounce.Stop()
+		}
+		debounce = time.AfterFunc(1*time.Second, func() {
+			time.Sleep(100 * time.Millisecond) // small buffer for atomic saves
+			logger.Info("Reloading rule file due to change",
+				zap.String("file", lastPath))
+			r.reloadFile(lastPath, op)
+		})
 	}
+	
 
   for{
     select{
@@ -171,12 +232,8 @@ func (r *RuleRegister) watch(){
 				zap.String("file", event.Name),
 				zap.String("op", event.Op.String()))
 
-			debounce.Reset(1 * time.Second)
+			resetDebounce(event.Name,event.Op)
 
-    case <- debounce.C:
-      time.Sleep(100 * time.Millisecond)
-      logger.Info("reloading rules due to change")
-			r.Reload()
     case err,ok := <- r.watcher.Errors:
       if !ok {
 				return

@@ -14,6 +14,8 @@ func (r *UnexpectedMount) Name() string { return "UnexpectedMount" }
 
 func (r *UnexpectedMount) Type() string { return programs.LoaderMount }
 
+func (r *UnexpectedMount) Source() string {return programs.BuiltinSource}
+
 func (r *UnexpectedMount) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	// Only consider mounts originating from containers
 	if !programs.IsContainerEvent(ev) {

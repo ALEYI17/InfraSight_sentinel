@@ -14,6 +14,8 @@ func (r *FilelessExecution) Name() string { return "FilelessExecution" }
 
 func (r *FilelessExecution) Type() string { return programs.Loaderexecve }
 
+func (r *FilelessExecution) Source() string {return programs.BuiltinSource}
+
 func (r *FilelessExecution) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult {
 	snoop, ok := ev.Payload.(*pb.EbpfEvent_Snoop)
 	if !ok || snoop.Snoop == nil {

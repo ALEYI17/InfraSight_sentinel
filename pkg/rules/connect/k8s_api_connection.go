@@ -15,6 +15,8 @@ func (r *KubernetesAPIConnection) Name() string { return "KubernetesAPIConnectio
 
 func (r *KubernetesAPIConnection) Type() string {return programs.LoaderConnect}
 
+func (r *KubernetesAPIConnection) Source() string {return programs.BuiltinSource}
+
 func isPrivateIPv4(addr string) bool {
 	ip := net.ParseIP(addr)
 	if ip == nil {
