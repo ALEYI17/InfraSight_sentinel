@@ -26,6 +26,8 @@ type YAMLRule struct {
   Logic       string            `yaml:"logic,omitempty"`
   Conditions  []Condition       `yaml:"conditions"`
 	Message     string            `yaml:"message"`
+
+  sourcePath string
 }
 
 func eventToMap(ev *pb.EbpfEvent) map[string]string{
@@ -80,9 +82,9 @@ func eventToMap(ev *pb.EbpfEvent) map[string]string{
 
 func (r *YAMLRule) Name() string { return r.RuleName }
 
-func (r *YAMLRule) Type() string {
-	return r.EventType
-}
+func (r *YAMLRule) Type() string { return r.EventType }
+
+func (r *YAMLRule) Source() string {return r.sourcePath}
 
 func (r *YAMLRule) Evaluate(ev *pb.EbpfEvent) *programs.RuleResult{
 

@@ -39,6 +39,7 @@ func LoadYAMLRules(dir string) ([]programs.Rule, error){
 
 
     for _, r := range rf.Rules{
+      r.sourcePath = path
       all = append(all, &r)
     }
 
@@ -52,3 +53,23 @@ func LoadYAMLRules(dir string) ([]programs.Rule, error){
 
   return all,nil
 }
+
+func LoadYAMLRulesFromFile(path string) ([]programs.Rule, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", path, err)
+	}
+
+	var rf RuleFile
+	if err := yaml.Unmarshal(data, &rf); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML %s: %w", path, err)
+	}
+
+	var all []programs.Rule
+	for _, r := range rf.Rules {
+    r.sourcePath=path
+		all = append(all, &r)
+	}
+	return all, nil
+}
+

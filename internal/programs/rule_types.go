@@ -6,6 +6,7 @@ type Rule interface {
     Name() string
     Evaluate(ev *pb.EbpfEvent) *RuleResult
     Type() string
+    Source() string
 }
 
 type RuleResult struct {
@@ -20,3 +21,5 @@ type RuleResult struct {
     ContainerImg string
     Extra        map[string]string // for flexible metadata
 }
+
+const BuiltinSource = "builtin"
