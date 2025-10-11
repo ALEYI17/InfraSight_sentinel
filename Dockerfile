@@ -12,8 +12,8 @@ RUN go build -o infrasight_sentinel cmd/main.go
 
 FROM golang:bookworm
 
-COPY --from=builder /workspace/infrasight_sentinel .
+WORKDIR /workspace
 
-RUN ls
+COPY --from=builder /workspace/infrasight_sentinel .
 
 ENTRYPOINT ["./infrasight_sentinel"]

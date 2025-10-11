@@ -43,6 +43,7 @@ The official image is available on GitHub Container Registry:
 ```bash
 docker run -it \
 --network ebpf_server_default \
+-v $(pwd)/rules:/workspace/rules:ro \
 -e KAFKA_BROKER=broker:29092 \
 -e KAFKA_TOPIC=ebpf_events \
 -e KAFKA_GROUPID=rules-engine \
