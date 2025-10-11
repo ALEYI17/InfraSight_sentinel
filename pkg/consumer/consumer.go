@@ -17,9 +17,10 @@ type KafkaConsumer struct{
   brokers []string
   topic string
   groupid string
+  engine *engine.Engine
 }
 
-func NewKafkaConsumer(cfg config.ProgramsConfig) *KafkaConsumer{
+func NewKafkaConsumer(cfg config.ProgramsConfig, e *engine.Engine) *KafkaConsumer{
 
   r := kafka.NewReader(kafka.ReaderConfig{
     Brokers: cfg.Kafka_broker,
@@ -32,7 +33,7 @@ func NewKafkaConsumer(cfg config.ProgramsConfig) *KafkaConsumer{
     brokers: cfg.Kafka_broker,
     topic: cfg.Kafka_topic,
     groupid: cfg.Kafka_groupid,
-
+    engine: e,
   }
 }
 
@@ -53,6 +54,6 @@ func(c *KafkaConsumer) Consume(ctx context.Context) error{
       continue
     }
 
-    engine.HandleEvent(&e)
+    c.engine.HandleEvent(&e)
   }
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/config"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/consumer"
+	"github.com/ALEYI17/InfraSight_sentinel/pkg/engine"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/rules"
 	"go.uber.org/zap"
@@ -38,9 +39,16 @@ func main(){
         zap.String("kafka_topic", cfg.Kafka_topic),
   )
 
-  rules.InitRules("rules")
+  rg,err := rules.NewRuleRegister("rules")
+  if err !=nil{
+    logger.Fatal("Failed to initialize rule register", zap.Error(err))
+  }
 
-  kc :=consumer.NewKafkaConsumer(*cfg)
+  logger.Info("Rule register initialized successfully")
+
+  e := engine.NewEngine(rg)
+
+  kc :=consumer.NewKafkaConsumer(*cfg,e)
 
   logger.Info("Kafka consumer initialized", 
         zap.String("group_id", cfg.Kafka_groupid))

@@ -2,6 +2,8 @@ package rules
 
 import (
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/programs"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
@@ -10,21 +12,57 @@ import (
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/rules/mount"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/rules/open"
 	"github.com/ALEYI17/InfraSight_sentinel/pkg/rules/ptrace"
+	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
 )
 
+type RuleRegister struct{
+  mu sync.RWMutex
+  Registry map[string][]programs.Rule
+  path     string
+  watcher *fsnotify.Watcher
+  stopCh  chan struct{}
+}
 
-var Registry = map[string][]programs.Rule{}
+func NewRuleRegister(path string) (*RuleRegister,error){
+  w,err := fsnotify.NewWatcher()
+  if err !=nil{
+    return nil,err
+  }
+
+  r := &RuleRegister{
+		Registry: make(map[string][]programs.Rule),
+		path:     path,
+    watcher: w,
+    stopCh:   make(chan struct{}),
+	}
+  
+  r.InitRules()
+
+  err = r.addWatch()
+  if err !=nil{
+    return nil,err
+  }
+
+  go r.watch()
+  
+  return r,nil
+}
 
 
-func InitRules(path string) {
+func (r *RuleRegister) InitRules() {
   logger := logutil.GetLogger()
-  Registry[programs.LoaderOpen] = open.Register()
-	Registry[programs.LoaderMount] = mount.Register()
-	Registry[programs.LoaderConnect] = connect.Register()
-	Registry[programs.LoaderPtrace] = ptrace.Register()
 
-  yamlDir := filepath.Join(path)
+  r.mu.Lock()
+  defer r.mu.Unlock()
+
+  r.Registry = map[string][]programs.Rule{}
+  r.Registry[programs.LoaderOpen] = open.Register()
+	r.Registry[programs.LoaderMount] = mount.Register()
+	r.Registry[programs.LoaderConnect] = connect.Register()
+	r.Registry[programs.LoaderPtrace] = ptrace.Register()
+
+  yamlDir := filepath.Join(r.path)
 
   logger.Info("Loading YAML rules from", zap.String("path", yamlDir))
 
@@ -49,15 +87,111 @@ func InitRules(path string) {
 		programs.LoadSyscallFreq:   true,
 	}
 
-  for _, r := range yamlRules {
-		et := r.Type()
+  for _, rule := range yamlRules {
+		et := rule.Type()
     if !validEventTypes[et]{
-      logger.Warn("Skipping YAML rule, for invalid event type", zap.String("name", r.Name()),zap.String("eventType", et))
+      logger.Warn("Skipping YAML rule, for invalid event type", zap.String("name", rule.Name()),zap.String("eventType", et))
       continue
     }
-		Registry[et] = append(Registry[et], r)
-    logger.Info("Load rule", zap.String("name", r.Name()))
+		r.Registry[et] = append(r.Registry[et], rule)
+    logger.Info("Load rule", zap.String("name", rule.Name()))
 	}
 
   
+}
+
+func (r *RuleRegister) Add(eventType string, rule programs.Rule) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Registry[eventType] = append(r.Registry[eventType], rule)
+}
+
+func (r *RuleRegister) Delete(eventType, ruleName string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	rules := r.Registry[eventType]
+	for i, rule := range rules {
+		if rule.Name() == ruleName {
+			r.Registry[eventType] = append(rules[:i], rules[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (r *RuleRegister) Get(eventType string) []programs.Rule {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.Registry[eventType]
+}
+
+func (r *RuleRegister) Reload() {
+	r.InitRules()
+}
+
+func (r *RuleRegister) addWatch() error {
+  logger := logutil.GetLogger()
+
+  dir := filepath.Clean(r.path)
+
+  if err := r.watcher.Add(dir); err != nil {
+		
+		return err
+	}
+
+	logger.Info("watching for rule file changes", zap.String("dir", dir))
+
+  return nil
+}
+
+func (r *RuleRegister) watch(){
+
+  logger := logutil.GetLogger()
+  debounce := time.NewTimer(0)
+	if !debounce.Stop() {
+		<-debounce.C
+	}
+
+  for{
+    select{
+
+    case event,ok:= <- r.watcher.Events:
+      if !ok {
+				return
+			}
+      
+      if (filepath.Ext(event.Name) != ".yaml" && filepath.Ext(event.Name) != ".yml") ||
+        (event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove) == 0) {
+        continue
+      }
+
+      
+      logger.Info("detected rule file change",
+				zap.String("file", event.Name),
+				zap.String("op", event.Op.String()))
+
+			debounce.Reset(1 * time.Second)
+
+    case <- debounce.C:
+      time.Sleep(100 * time.Millisecond)
+      logger.Info("reloading rules due to change")
+			r.Reload()
+    case err,ok := <- r.watcher.Errors:
+      if !ok {
+				return
+			}
+			logger.Warn("watcher error", zap.Error(err))
+
+    case <-r.stopCh:
+			logger.Info("stopping rule watcher")
+			_ = r.watcher.Close()
+			return
+    }
+  }
+}
+
+
+func (r *RuleRegister) StopWatcher() {
+	close(r.stopCh)
 }

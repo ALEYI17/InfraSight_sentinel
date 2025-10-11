@@ -7,12 +7,21 @@ import (
 	"go.uber.org/zap"
 )
 
+type Engine struct{
+  rg *rules.RuleRegister
+}
 
-func HandleEvent(ev *pb.EbpfEvent) {
+func NewEngine(rg *rules.RuleRegister) *Engine{
+  return &Engine{
+    rg: rg,
+  }
+}
+
+func (e *Engine) HandleEvent(ev *pb.EbpfEvent) {
   logger := logutil.GetLogger()
-  applicablerules,ok := rules.Registry[ev.EventType]
+  applicablerules := e.rg.Get(ev.EventType)
 
-  if len(applicablerules) == 0 || !ok{
+  if len(applicablerules) == 0 {
     return
   }
 
