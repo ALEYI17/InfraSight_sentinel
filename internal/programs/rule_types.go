@@ -23,3 +23,49 @@ type RuleResult struct {
 }
 
 const BuiltinSource = "builtin"
+
+const (
+	OpEquals          = "equals"
+	OpDoubleEquals    = "=="
+	OpNotEquals       = "not_equals"
+	OpNotEqualsAlt    = "!="
+	OpGreaterThan     = "greater_than"
+	OpGreaterThanAlt  = ">"
+	OpGreaterEqual    = "greater_or_equal"
+	OpGreaterEqualAlt = ">="
+	OpLessThan        = "less_than"
+	OpLessThanAlt     = "<"
+	OpLessEqual       = "less_or_equal"
+	OpLessEqualAlt    = "<="
+	OpContains        = "contains"
+	OpNotContains     = "not_contains"
+	OpStartsWith      = "starts_with"
+	OpEndsWith        = "ends_with"
+	OpRegex           = "regex"
+	OpIn              = "in"
+	OpNotIn           = "not_in"
+)
+
+func ValidOperators() map[string]struct{} {
+	return map[string]struct{}{
+		OpEquals:          {},
+		OpDoubleEquals:    {},
+		OpNotEquals:       {},
+		OpNotEqualsAlt:    {},
+		OpGreaterThan:     {},
+		OpGreaterThanAlt:  {},
+		OpGreaterEqual:    {},
+		OpGreaterEqualAlt: {},
+		OpLessThan:        {},
+		OpLessThanAlt:     {},
+		OpLessEqual:       {},
+		OpLessEqualAlt:    {},
+		OpContains:        {},
+		OpNotContains:     {},
+		OpStartsWith:      {},
+		OpEndsWith:        {},
+		OpRegex:           {},
+		OpIn:              {},
+		OpNotIn:           {},
+	}
+}

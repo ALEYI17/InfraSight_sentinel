@@ -166,39 +166,39 @@ func compare(actual, op, expected string) bool {
 	eNum, eErr := strconv.ParseFloat(expected, 64)
 	isNumeric := aErr == nil && eErr == nil
 	switch op {
-	case "equals", "==":
+	case programs.OpEquals, programs.OpDoubleEquals:
     if isNumeric{
       return aNum == eNum
     }
 		return strings.EqualFold(actual, expected)
-  case "not_equals", "!=":
+  case programs.OpNotEqualsAlt, programs.OpNotEquals:
     if isNumeric {
 			return aNum != eNum
 		}
     return !strings.EqualFold(actual, expected)
-  case "greater_than",">":
+  case programs.OpGreaterThanAlt,programs.OpGreaterThan:
     return isNumeric && aNum > eNum
-  case "greater_or_equal" , ">=":
+  case programs.OpGreaterEqualAlt , programs.OpGreaterEqual:
     return isNumeric && aNum >= eNum
-  case "less_than", "<":
+  case programs.OpLessThanAlt, programs.OpLessThan:
     return isNumeric && aNum < eNum
-  case "less_or_equal", "<=":
+  case programs.OpLessEqualAlt, programs.OpLessEqual:
     return isNumeric && aNum <= eNum
-	case "contains":
+	case programs.OpContains:
 		return strings.Contains(actual, expected)
-  case "not_contains":
+  case programs.OpNotContains:
     return !strings.Contains(strings.ToLower(actual), strings.ToLower(expected))
-	case "starts_with":
+	case programs.OpStartsWith:
 		return strings.HasPrefix(actual, expected)
-	case "ends_with":
+	case programs.OpEndsWith:
 		return strings.HasSuffix(actual, expected)
-	case "regex":
+	case programs.OpRegex:
 		re, err := regexp.Compile(expected)
 		if err != nil {
 			return false
 		}
 		return re.MatchString(actual)
-  case "in":
+  case programs.OpIn:
     values := strings.Split(expected, ",")
     for _,v := range values{
       if strings.EqualFold(strings.TrimSpace(v), actual){
@@ -206,7 +206,7 @@ func compare(actual, op, expected string) bool {
       }
     }
     return false
-  case "not_in":
+  case programs.OpNotIn:
     values := strings.Split(expected, ",")
     for _,v := range values{
       if strings.EqualFold(strings.TrimSpace(v), actual){
