@@ -153,7 +153,14 @@ func evaluateCondition(c Condition, values map[string]string) bool {
 		return evaluateConditionsWithLogic(c.Subconditions, values, c.Logic)
 	}
 
-	actual := values[c.Field]
+	//actual := values[c.Field]
+  var actual string
+	for k, v := range values {
+		if strings.EqualFold(k, c.Field) {
+			actual = v
+			break
+		}
+	}
 	return compare(actual, c.Operator, c.Value)
 }
 
@@ -201,7 +208,7 @@ func compare(actual, op, expected string) bool {
   case programs.OpIn:
     values := strings.Split(expected, ",")
     for _,v := range values{
-      if strings.EqualFold(strings.TrimSpace(v), actual){
+      if strings.EqualFold(strings.TrimSpace(v),strings.TrimSpace(actual)){
         return true
       }
     }
@@ -209,7 +216,7 @@ func compare(actual, op, expected string) bool {
   case programs.OpNotIn:
     values := strings.Split(expected, ",")
     for _,v := range values{
-      if strings.EqualFold(strings.TrimSpace(v), actual){
+      if strings.EqualFold(strings.TrimSpace(v), strings.TrimSpace(actual)){
         return false
       }
     }

@@ -26,6 +26,14 @@ func (r *YAMLRule) Validate() error{
     return err
   }
 
+  if err := r.validateLogicValue(r.Logic);err !=nil{
+    return err
+  }
+
+  if err := r.validateCondition();err !=nil{
+    return err
+  }
+
   return nil
 }
 
@@ -39,6 +47,8 @@ func(r *YAMLRule) validateRuleName() error{
 func (r *YAMLRule) validateEventType() error{
   
   et := r.Type()
+
+  fmt.Printf("DEBUG: event type from rule: %q\n", et)
   validEventTypes := map[string]bool{
 		programs.LoaderOpen:        true,
 		programs.Loaderexecve:      true,
@@ -53,10 +63,12 @@ func (r *YAMLRule) validateEventType() error{
 		programs.LoadSyscallFreq:   true,
 	}
 
+  if et == ""{
+    return fmt.Errorf("rule event type cannot be empty")
+  }
+
   if !validEventTypes[et]{
-    return fmt.Errorf("rule event type cannot be empty")
-  }else if et == ""{
-    return fmt.Errorf("rule event type cannot be empty")
+    return fmt.Errorf("invalid event type %q", et)
   }
 
   return nil
@@ -102,7 +114,11 @@ func (r *YAMLRule) validateSubConditions(c *Condition, et *string) error{
       return fmt.Errorf(" field cannot be empty in a condition")
     }
 
-    if err := r.validateConditionField(&c.Field, et); err !=nil{
+    if err := r.validateConditionField(c.Field, et); err !=nil{
+      return err
+    }
+
+    if err := r.validateConditionValue(c); err !=nil{
       return err
     }
 
@@ -113,9 +129,13 @@ func (r *YAMLRule) validateSubConditions(c *Condition, et *string) error{
     return nil
   }
 
+  if err := r.validateLogicValue(c.Logic); err !=nil{
+    return fmt.Errorf("invalid logic in nested condition: %w", err)
+  }
+
   for i := range c.Subconditions{
     if err := r.validateSubConditions(&c.Subconditions[i], et);err !=nil{
-      return err
+      return fmt.Errorf("invalid subcondition #%d: %w", i, err)
     }
   }
 
@@ -130,7 +150,7 @@ func (r *YAMLRule) validateConditionOperator(c *Condition) error{
     return fmt.Errorf("invalid operator %q",  c.Operator)
   }
 
-  if c.Operator == "regex" && c.Value != ""{
+  if strings.ToLower(c.Operator) == "regex" && c.Value != ""{
     if _, err := regexp.Compile(c.Value); err != nil {
 				return fmt.Errorf("invalid regex pattern %q: %v", c.Value, err)
 			}
@@ -139,6 +159,52 @@ func (r *YAMLRule) validateConditionOperator(c *Condition) error{
   return nil
 }
 
-func (r *YAMLRule) validateConditionField(field *string, et *string) error{
+func (r *YAMLRule) validateConditionField(field string, et *string) error{
 
+  if field == ""{
+    return fmt.Errorf("condition field cannot be empty")
+  }
+
+  if et == nil || *et == "" {
+		return fmt.Errorf("event type cannot be empty")
+	}
+
+  eventType := strings.ToLower(*et)
+  payloadType := programs.EventTypeToPayload[eventType] 
+	fieldName := strings.TrimSpace(field)
+
+  allowedFields, ok := programs.AllowedFieldsByEventType[payloadType]
+  if !ok {
+		return fmt.Errorf("unknown event type %q", eventType)
+	}
+
+  for _, allowed := range allowedFields {
+		if strings.EqualFold(fieldName, allowed) {
+			return nil 
+		}
+	}
+
+  return fmt.Errorf("invalid field %q for event type %q", fieldName, eventType)
+}
+
+func (r *YAMLRule) validateLogicValue(logic string) error {
+	if logic == "" {
+		return nil // optional, defaults to "and"
+	}
+	switch strings.ToLower(logic) {
+	case "and", "or":
+		return nil
+	default:
+		return fmt.Errorf("invalid logic operator %q: must be 'and' or 'or'", logic)
+	}
+}
+
+
+func (r *YAMLRule) validateConditionValue(c *Condition) error{
+
+  if c.Value ==""{
+    return fmt.Errorf("value cannot be empty for field %q", c.Field)
+  }
+
+  return nil
 }

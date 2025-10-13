@@ -69,3 +69,37 @@ func ValidOperators() map[string]struct{} {
 		OpNotIn:           {},
 	}
 }
+
+var EventTypeToPayload = map[string]string{
+    "connect": "network",
+    "accept":  "network",
+    "open":    "snoop",
+    "execve":  "snoop",
+    "chmod":   "snoop",
+    "ptrace":  "ptrace",
+    "mount":   "mount",
+    "umount":  "mount",
+    // etc.
+}
+
+var AllowedFieldsByEventType = map[string][]string{
+	"snoop": {
+		"pid", "ppid", "user", "comm", "container.id", "container.image", "event_type",
+		"snoop.filename",
+	},
+	"network": {
+		"pid", "ppid", "user", "comm", "container.id", "container.image", "event_type",
+		"network.Saddrv4", "network.Daddrv4", "network.Saddrv6", "network.Daddrv6",
+		"network.Sport", "network.Dport", "network.SaFamily", "network.ResolvedDomain",
+	},
+	"ptrace": {
+		"pid", "ppid", "user", "comm", "container.id", "container.image", "event_type",
+		"ptrace.Request", "ptrace.TargetPid", "ptrace.Addr", "ptrace.Data",
+		"ptrace.ReturnCode", "ptrace.RequestName",
+	},
+	"mount": {
+		"pid", "ppid", "user", "comm", "container.id", "container.image", "event_type",
+		"mount.DevName", "mount.DirName", "mount.Type", "mount.Flags", "mount.ReturnCode",
+	},
+}
+

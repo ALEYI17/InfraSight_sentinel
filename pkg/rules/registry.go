@@ -73,26 +73,8 @@ func (r *RuleRegister) InitRules() {
 		return
 	}
 
-  validEventTypes := map[string]bool{
-		programs.LoaderOpen:        true,
-		programs.Loaderexecve:      true,
-		programs.LoaderChmod:       true,
-		programs.LoaderConnect:     true,
-		programs.LoaderAccept:      true,
-		programs.LoaderPtrace:      true,
-		programs.LoaderMmap:        true,
-		programs.LoaderMount:       true,
-		programs.LoadUmount:        true,
-		programs.LoadResource:      true,
-		programs.LoadSyscallFreq:   true,
-	}
-
   for _, rule := range yamlRules {
 		et := rule.Type()
-    if !validEventTypes[et]{
-      logger.Warn("Skipping YAML rule, for invalid event type", zap.String("name", rule.Name()),zap.String("eventType", et))
-      continue
-    }
 		r.Registry[et] = append(r.Registry[et], rule)
     logger.Info("Load rule", zap.String("name", rule.Name()))
 	}

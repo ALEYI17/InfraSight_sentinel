@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/ALEYI17/InfraSight_sentinel/internal/programs"
+	"github.com/ALEYI17/InfraSight_sentinel/pkg/logutil"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,6 +18,7 @@ type RuleFile struct {
 
 
 func LoadYAMLRules(dir string) ([]programs.Rule, error){
+  logger := logutil.GetLogger()
   var all []programs.Rule
 
   err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -38,9 +41,17 @@ func LoadYAMLRules(dir string) ([]programs.Rule, error){
 		}
 
 
-    for _, r := range rf.Rules{
-      r.sourcePath = path
-      all = append(all, &r)
+    for i := range rf.Rules{
+      rf.Rules[i].sourcePath = path
+      if err := rf.Rules[i].Validate(); err !=nil{
+        logger.Warn("Skipping invalid rule",
+          zap.String("file", path),
+          zap.String("rule", rf.Rules[i].RuleName),
+          zap.Error(err),
+        )
+        continue
+      }
+      all = append(all, &rf.Rules[i])
     }
 
     return nil
@@ -51,10 +62,13 @@ func LoadYAMLRules(dir string) ([]programs.Rule, error){
     return nil,err
   }
 
+  logger.Info("Loaded YAML rules", zap.Int("count", len(all)), zap.String("dir", dir))
   return all,nil
 }
 
 func LoadYAMLRulesFromFile(path string) ([]programs.Rule, error) {
+  logger := logutil.GetLogger()
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", path, err)
@@ -66,10 +80,19 @@ func LoadYAMLRulesFromFile(path string) ([]programs.Rule, error) {
 	}
 
 	var all []programs.Rule
-	for _, r := range rf.Rules {
-    r.sourcePath=path
-		all = append(all, &r)
+	for i := range rf.Rules {
+    rf.Rules[i].sourcePath=path
+    if err := rf.Rules[i].Validate();err !=nil{
+      logger.Warn("Skipping invalid rule",
+        zap.String("file", path),
+        zap.String("rule", rf.Rules[i].RuleName),
+        zap.Error(err),
+      )
+      continue
+    }
+    all = append(all, &rf.Rules[i])
 	}
+  logger.Info("Loaded YAML rules", zap.Int("count", len(all)), zap.String("file", path))
 	return all, nil
 }
 
