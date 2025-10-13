@@ -48,7 +48,6 @@ func (r *YAMLRule) validateEventType() error{
   
   et := r.Type()
 
-  fmt.Printf("DEBUG: event type from rule: %q\n", et)
   validEventTypes := map[string]bool{
 		programs.LoaderOpen:        true,
 		programs.Loaderexecve:      true,
